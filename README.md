@@ -1,2 +1,3 @@
-# First-time-eligible-arbitration-salary-prediction
-Modelling the relationship between an MLB player’s first-time eligible arbitration salary and multiple variables. Linear regression was performed.
+**Special thanks to Kuan-cheng Fu for providing huge help on this project
+
+In this task, I worked with a subset of batting-level data from players' career, platform year(the year before the year of their arbitration contract), py-1(the year before platform year) and py-2(two years before platform year). Detailed definitions of the variables can be found in the excel file within the same repository. On the basis of this data, the goal of this research was to develop a reliable framework which is capable of predicting a player’s first-time eligible arbitration salary(salary_1te) and placing them into tiers. The framework is basically composed of below parts: feature preprocessing, model building, hyperparameter tuning, model evaluation, and first-time eligible arbitration salary prediction.
