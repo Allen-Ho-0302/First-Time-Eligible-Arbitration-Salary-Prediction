@@ -1,0 +1,99 @@
+---
+title: "First Arb Salary Part 1"
+author: "Allen Ho"
+output: html_document
+---
+
+## Introduction  
+In this task, I worked with a subset of batting-level data from players' career, platform year(the year before the year of their arbitration contract), py-1(the year before platform year) and py-2(two years before platform year). Detailed definitions of the variables can be found in the excel file within the same repository. On the basis of this data, the goal of this research was to develop a reliable framework which is capable of predicting a player’s first-time eligible arbitration salary(salary_1te). The framework is basically composed of below parts: feature preprocessing, model building, hyperparameter tuning, model evaluation, and first-time eligible arbitration salary prediction.
+```{r Library, include=FALSE, warning = FALSE}
+box::use(
+  tidyverse[...],
+  dplyr[...],
+  ggplot2[...],
+  bbdbc[execute_query],
+  modelr[add_predictions],
+  knitr[...],
+  kableExtra[...],
+  here[here],
+  zoo[...],
+  see[...],
+  Boruta[...],
+  tidyr[pivot_wider],
+  tibble[...],
+  gridExtra[...],
+  RODBC[...],
+  lubridate[...],
+  lightgbm[...],
+  caret[...],
+  tidyr[...],
+  Deducer[...],
+  pROC[...],
+  randomForest[...],
+  performance[...],
+  psych[...],
+  readxl[...]
+)
+```
+
+```{r Main Dataset Loading and structure, echo = TRUE, warning = FALSE}
+#Main dataframe loading
+df <-  read_excel("D:/First Arb Salary/First Arb Salary.xlsx")
+#Check the structure of the dataframe
+str(df)
+#Check the summary of the dataframe
+summary(df)
+```
+
+## Data Preprocessing  
+As seen from the summary above, it seems like there are some missing value in the column **py-2 war**.  
+```{r Missing Value Detection, echo = TRUE, warning = FALSE}
+#Change the names of the columns for easier data manipulation
+names(df) <- gsub(" ", "", names(df))
+names(df) <- gsub("-", "", names(df))
+names(df) <- gsub("_", "", names(df))
+#Convert the column of interest, py2war, into numeric type
+df$py2war <- as.numeric(as.character(df$py2war))
+#Take a look at the rows with missing values in py2war
+df %>%
+  filter(is.na(py2war))
+```
+
+Judging from the more traditional stats and those votings, it does not seem like those with missing values in **py2war** are players that stand out either way. Thus I'll remove these instances from the dataset. I'll also convert some columns into character types as they should be.  
+```{r Data Preprocessing, echo = TRUE, warning = FALSE}
+#Remove instances with missing values in py2war
+df <- df %>%
+  filter(!is.na(py2war))
+
+#Convert some columns into character type
+i <- c('playerid', 'primaryposition', 'platformyear', 'pyas', 'pymvp', 'pyss', 'py1as', 'py1mvp', 'py1ss', 'py2as', 'py2mvp', 'py2ss') 
+df[ , i] <- apply(df[ , i], 2, function(x) as.character(x))
+```
+
+## Stepwise Linear Regression Model  
+Since there are only 267 instances(after data cleaning) in this dataset, I'll focus on linear regression model to predict the first year arbitration salary first. I'll use stepwise feature selection since 80 ish variables are probably just way too many. As from below, a simple linear regression model with stepwise feature selection already gave me **0.98 R^2^** and **2.041e+05 RMSE**. Not bad I would say. Also from the below table, we can see that the linear regression model focuses a lot on performance in platform year, which is not surprising from a baseball standpoint.  
+```{r Linear Regression, echo = TRUE, warning = FALSE}
+
+#define intercept-only model
+intercept_only <- lm(salary1te ~ 1, df)
+
+#define model with all predictors
+all <- lm(salary1te ~ . - salary1te - playerid, df)
+
+#perform backward stepwise regression
+both <- step(intercept_only, direction='both', scope=formula(all), trace=0)
+
+data.frame(performance(both)) %>%
+  kbl() %>%
+  kable_classic(full_width = F, html_font = "Cambria")
+
+
+data.frame(Variable = row.names(anova(both)),
+           pvalue = anova(both)$Pr) %>%
+  arrange(pvalue) %>%
+  kbl() %>%
+  kable_classic(full_width = F, html_font = "Cambria")
+
+```
+
+Now that we now how we should set our baseline expectations for this prediction, I will move on to more potent models like KNN, random forest and lightgbm models. The details of these models can be found in the Jupyter Notebook file. From RMSE, it does not seem like more complex models are helping us with this project though.  
